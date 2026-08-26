@@ -19,23 +19,40 @@ Go to [console.firebase.google.com](https://console.firebase.google.com), sign i
 ### 2. Create a Firestore database
 In your new project's left sidebar, click **Build → Firestore Database → Create database**. Choose **Start in test mode** and pick any location close to you.
 
-### 3. Set security rules
-Still in Firestore, open the **Rules** tab and replace the contents with:
+### 3. Set security rules — updated for accounts
+Open the **Rules** tab in Firestore and replace the *entire* contents with:
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /recommendations/{recId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /meta/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }
 ```
 
-Click **Publish**. This keeps things simple by letting anyone with the link read and add entries anywhere in the database (including the shared platform list) — fine for a small friend group, but worth knowing: there's no login, so treat the link like an invite you only share with people you trust.
+Click **Publish**. This is a real step up from before: anyone can still *read* the list without an account, but *writing* anything now requires being signed in. The `usernames` rule is what guarantees two people can't grab the same username — Firestore rejects the second person's claim automatically.
 
-> **Already had the app running?** If your rules only mention `recommendations`, update them to the wildcard version above — otherwise the shared streaming-platform list (see below) will silently fail to save.
+> **This replaces the old wildcard rule entirely** — don't leave both in place, paste over the whole thing.
+
+### 4. Turn on Email/Password sign-in
+In the Firebase console, go to **Build → Authentication → Get started**, then **Sign-in method** tab, and enable **Email/Password**. (The app only ever shows your friends a username, but it uses this provider behind the scenes — see "How accounts work" below.)
 
 ### 4. Get your web app config
 Back on the project's main **Overview** page, click the **`</>`** (web) icon to register a new web app. Give it any nickname, skip Firebase Hosting, and click **Register app**. Firebase will show you a `firebaseConfig` object with values like `apiKey`, `authDomain`, etc.
@@ -73,6 +90,21 @@ GitHub will give you a URL shaped like `https://yourusername.github.io/your-repo
 - **Ratings** — once something's marked watched, leave a 1–5 star rating; the card shows the group average.
 - **Comments** — a small expandable thread under each entry.
 - **Surprise me** — picks a random unwatched title and scrolls to it, for indecisive movie nights.
+
+## How accounts work
+You sign up with just a username and password — no email or phone. Behind the scenes, Firebase Auth technically needs an email-shaped string, so the app quietly turns your username into `yourname@watchlist.local`. You'll never see or use that; it's invisible.
+
+**Known limitation:** because that email isn't real, Firebase's standard "forgot password" flow can't reach you (there's nowhere to send the reset link). If you forget your password, the practical fix is signing up again under a different username.
+
+## What's new
+- **Accounts & profiles** — sign up/sign in, an editable avatar (click it to cycle emoji), bio, favorite genres, and stats (added/rated/your average rating). "Your Name" is gone — everything now uses your logged-in username automatically.
+- **Redesigned layout** — a top bar with search, a proper nav (Discover / My List / Group picks / Profile), a "tonight's pick" hero, and compact cards that open a detail view instead of showing everything inline.
+- **My List** — a quick filtered view of what you've added or marked interested in.
+- **Where to watch** — pick a streaming platform when adding a title, or add your own — it's saved for everyone.
+- **Poster art & year** — fetched automatically from a free public movie lookup.
+- **Search & sort**, **want-to-watch tallies**, **ratings**, **comments** — all still here, now living in the detail view.
+- **Group picks** — a placeholder tab for now; watch-party matching and polls are a later phase.
+- **Install as an app** — Chrome will offer to install this as a standalone app (desktop and mobile).
 
 ## Customizing it
 Everything lives in `index.html`, so it's all in one place to tweak:
