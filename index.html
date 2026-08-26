@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Watch List</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%9E%EF%B8%8F%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #15121f;
+    --surface: #211c2e;
+    --gold: #f0b429;
+    --red: #e2453c;
+    --text: #f2ede4;
+    --text-muted: #9a91ac;
+    --border: #352f47;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  /* --- Marquee header --- */
+  .marquee { text-align: center; margin-bottom: 32px; }
+  .marquee-border {
+    height: 6px;
+    background-image: radial-gradient(circle, var(--gold) 2.2px, transparent 2.5px);
+    background-size: 22px 6px;
+    background-repeat: repeat-x;
+    background-position: center;
+    margin: 10px 0;
+    opacity: 0.85;
+  }
+  .marquee h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    letter-spacing: 0.06em;
+    margin: 8px 0 4px;
+    color: var(--gold);
+  }
+  .marquee .tagline { color: var(--text-muted); margin: 0; font-size: 0.95rem; }
+
+  /* --- Banner --- */
+  .banner {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 0.9rem;
+  }
+  .banner.error { border-color: var(--red); }
+
+  /* --- Form --- */
+  .rec-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 28px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.3fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .field .optional { text-transform: none; letter-spacing: 0; opacity: 0.7; }
+
+  input, select, textarea, button { font-family: inherit; font-size: 0.95rem; }
+  input, select, textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 10px;
+    color: var(--text);
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 44px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .add-btn {
+    background: var(--gold);
+    color: #1a1625;
+    border: none;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .add-btn:hover { transform: translateY(-1px); }
+
+  /* --- Filters --- */
+  .filters { display: flex; gap: 8px; margin-bottom: 20px; }
+  .filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .filter-btn.active { border-color: var(--gold); color: var(--gold); }
+
+  /* --- List --- */
+  .list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 20px;
+  }
+  .empty {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 40px 0;
+    grid-column: 1 / -1;
+  }
+
+  /* --- Ticket card --- */
+  .card {
+    position: relative;
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s ease;
+  }
+  .card:hover { border-color: var(--gold); }
+  .card::before, .card::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: var(--bg);
+    border-radius: 50%;
+    left: 64px;
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+  .card::before { top: -8px; }
+  .card::after { bottom: -8px; }
+
+  .stub {
+    position: relative;
+    width: 64px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 6px;
+    border-right: 2px dashed var(--border);
+    font-size: 1.6rem;
+  }
+  .stub .stub-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .card.watched .stub::after {
+    content: "WATCHED";
+    position: absolute;
+    inset: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    color: var(--red);
+    border: 2px solid var(--red);
+    border-radius: 4px;
+    transform: rotate(-10deg);
+    background: rgba(21, 18, 31, 0.6);
+  }
+
+  .content { position: relative; flex: 1; padding: 16px 16px 14px; min-width: 0; }
+  .content h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-size: 1.4rem;
+    letter-spacing: 0.03em;
+    margin: 0 0 6px;
+    color: var(--text);
+    padding-right: 20px;
+  }
+  .note { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 12px; word-break: break-word; }
+  .card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .recommender { font-size: 0.78rem; color: var(--text-muted); }
+  .watch-btn {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .card.watched .watch-btn { border-color: var(--text-muted); color: var(--text-muted); }
+  .card.watched { opacity: 0.75; }
+
+  .delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 4px;
+    z-index: 3;
+  }
+  .delete-btn:hover { color: var(--red); }
+
+  .footer { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 40px; }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .stub { width: 52px; }
+    .card::before, .card::after { left: 52px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="marquee">
+      <div class="marquee-border"></div>
+      <h1>The Watch List</h1>
+      <p class="tagline">Recommendations from the crew, one ticket at a time</p>
+      <div class="marquee-border"></div>
+    </header>
+
+    <div id="banner" class="banner" hidden></div>
+
+    <form id="recForm" class="rec-form" aria-label="Add a recommendation">
+      <div class="form-grid">
+        <div class="field">
+          <label for="title">Title</label>
+          <input type="text" id="title" required maxlength="80" placeholder="e.g. Parasite">
+        </div>
+        <div class="field">
+          <label for="type">Type</label>
+          <select id="type">
+            <option value="Movie">🎬 Movie</option>
+            <option value="TV Series">📺 TV Series</option>
+            <option value="Documentary">🎥 Documentary</option>
+            <option value="Anime">🌸 Anime</option>
+            <option value="Other">✨ Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="name">Your name</label>
+          <input type="text" id="name" required maxlength="30" placeholder="e.g. Priya">
+        </div>
+      </div>
+      <div class="field">
+        <label for="note">Why watch it? <span class="optional">optional</span></label>
+        <textarea id="note" maxlength="140" placeholder="One line to sell the room on it"></textarea>
+      </div>
+      <button type="submit" class="add-btn">+ Add to the list</button>
+    </form>
+
+    <div class="filters" role="tablist" aria-label="Filter the list">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="unwatched">To watch</button>
+      <button class="filter-btn" data-filter="watched">Watched</button>
+    </div>
+
+    <div id="list" class="list"></div>
+
+    <p class="footer">made for movie-night arguments 🍿</p>
+  </div>
+
+  <!-- Firebase (compat build — simplest syntax for beginners) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ============================================================
+    // FIREBASE CONFIG
+    // Replace the values below with YOUR OWN project's config —
+    // see README.md for the step-by-step to get these.
+    // Until you do, the app runs in DEMO MODE with sample data
+    // that lives only in this browser tab (nothing is shared).
+    // ============================================================
+  const firebaseConfig = {
+  apiKey: "AIzaSyDUegzsqV2MLHzKQAnmi1KllNEmTGDoyyo",
+  authDomain: "movie-watchlist-f3236.firebaseapp.com",
+  projectId: "movie-watchlist-f3236",
+  storageBucket: "movie-watchlist-f3236.firebasestorage.app",
+  messagingSenderId: "897296685817",
+  appId: "1:897296685817:web:57b071881531e3ca52e028",
+  measurementId: "G-5XSRF1DF67"
+};
+
+    const isDemo = firebaseConfig.apiKey === "YOUR_API_KEY";
+    let recommendationsRef = null;
+
+    if (!isDemo) {
+      firebase.initializeApp(firebaseConfig);
+      recommendationsRef = firebase.firestore().collection("recommendations");
+    }
+
+    // Sample data, used only until Firebase is connected
+    let demoRecs = [
+      { id: "d1", title: "Spirited Away", type: "Anime", name: "Sam", note: "Best animated film ever made, fight me.", watched: false },
+      { id: "d2", title: "The Bear", type: "TV Series", name: "Priya", note: "Stressful but so good.", watched: true },
+      { id: "d3", title: "Won't You Be My Neighbor?", type: "Documentary", name: "Alex", note: "", watched: false }
+    ];
+
+    const form = document.getElementById("recForm");
+    const list = document.getElementById("list");
+    const banner = document.getElementById("banner");
+    const filterButtons = document.querySelectorAll(".filter-btn");
+
+    let currentFilter = "all";
+    let allRecs = [];
+
+    if (isDemo) {
+      showBanner("You're viewing sample tickets — connect Firebase (see README.md) so everyone sees the same shared list.", false);
+    }
+
+    // --- Add a new recommendation ---
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById("title").value.trim();
+      const type = document.getElementById("type").value;
+      const name = document.getElementById("name").value.trim();
+      const note = document.getElementById("note").value.trim();
+
+      if (!title || !name) return;
+
+      if (isDemo) {
+        demoRecs.unshift({ id: "d" + Date.now(), title, type, name, note, watched: false });
+        form.reset();
+        renderList();
+        return;
+      }
+
+      recommendationsRef.add({
+        title, type, name, note,
+        watched: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => form.reset())
+        .catch((error) => {
+          console.error("Error adding recommendation:", error);
+          showBanner("Couldn't add that — check your Firebase setup in the script.", true);
+        });
+    });
+
+    // --- Filters ---
+    filterButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        filterButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.filter;
+        renderList();
+      });
+    });
+
+    // --- Load data ---
+    if (isDemo) {
+      allRecs = demoRecs;
+      renderList();
+    } else {
+      recommendationsRef.orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+        allRecs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderList();
+      }, (error) => {
+        console.error("Error loading recommendations:", error);
+        showBanner("Couldn't reach the list — double-check the Firebase config and security rules.", true);
+      });
+    }
+
+    // --- Render ---
+    function renderList() {
+      let filtered = allRecs;
+      if (currentFilter === "watched") filtered = allRecs.filter(r => r.watched);
+      if (currentFilter === "unwatched") filtered = allRecs.filter(r => !r.watched);
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<p class="empty">No recommendations yet — be the first to add one.</p>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(rec => `
+        <div class="card ${rec.watched ? "watched" : ""}">
+          <div class="stub">
+            <span>${typeEmoji(rec.type)}</span>
+            <span class="stub-label">${escapeHtml(rec.type)}</span>
+          </div>
+          <div class="content">
+            <button class="delete-btn" onclick="deleteRec('${rec.id}')" title="Remove" aria-label="Remove ${escapeHtml(rec.title)}">✕</button>
+            <h3>${escapeHtml(rec.title)}</h3>
+            ${rec.note ? `<p class="note">${escapeHtml(rec.note)}</p>` : ""}
+            <div class="card-bottom">
+              <span class="recommender">— ${escapeHtml(rec.name)}</span>
+              <button class="watch-btn" onclick="toggleWatched('${rec.id}', ${rec.watched})">
+                ${rec.watched ? "Mark unwatched" : "Mark watched"}
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function toggleWatched(id, current) {
+      if (isDemo) {
+        const rec = demoRecs.find(r => r.id === id);
+        if (rec) rec.watched = !current;
+        renderList();
+        return;
+      }
+      recommendationsRef.doc(id).update({ watched: !current });
+    }
+
+    function deleteRec(id) {
+      if (!confirm("Remove this recommendation?")) return;
+      if (isDemo) {
+        demoRecs = demoRecs.filter(r => r.id !== id);
+        renderList();
+        return;
+      }
+      recommendationsRef.doc(id).delete();
+    }
+
+    function typeEmoji(type) {
+      const map = { "Movie": "🎬", "TV Series": "📺", "Documentary": "🎥", "Anime": "🌸", "Other": "✨" };
+      return map[type] || "✨";
+    }
+
+    function showBanner(message, isError) {
+      banner.textContent = message;
+      banner.hidden = false;
+      banner.classList.toggle("error", !!isError);
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str == null ? "" : str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
