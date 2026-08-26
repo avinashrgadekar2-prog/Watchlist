@@ -26,14 +26,16 @@ Still in Firestore, open the **Rules** tab and replace the contents with:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /recommendations/{recId} {
+    match /{document=**} {
       allow read, write: if true;
     }
   }
 }
 ```
 
-Click **Publish**. This keeps things simple by letting anyone with the link read and add entries — fine for a small friend group, but worth knowing: there's no login, so treat the link like an invite you only share with people you trust.
+Click **Publish**. This keeps things simple by letting anyone with the link read and add entries anywhere in the database (including the shared platform list) — fine for a small friend group, but worth knowing: there's no login, so treat the link like an invite you only share with people you trust.
+
+> **Already had the app running?** If your rules only mention `recommendations`, update them to the wildcard version above — otherwise the shared streaming-platform list (see below) will silently fail to save.
 
 ### 4. Get your web app config
 Back on the project's main **Overview** page, click the **`</>`** (web) icon to register a new web app. Give it any nickname, skip Firebase Hosting, and click **Register app**. Firebase will show you a `firebaseConfig` object with values like `apiKey`, `authDomain`, etc.
@@ -62,6 +64,15 @@ In your repo, go to **Settings → Pages**. Under "Build and deployment", set **
 
 ### 8. Share the link
 GitHub will give you a URL shaped like `https://yourusername.github.io/your-repo-name/`. It can take a minute or two to go live. That's the link you send your friends — everyone who opens it sees and adds to the same list in real time.
+
+## What's new
+- **Where to watch** — pick a streaming platform when adding a title (Netflix, Disney+ Hotstar, Zee5, YouTube, Voot, Apple TV+, Amazon Prime Video, SonyLIV). Choose "+ Add a platform…" to add your own — it's saved for everyone, so nobody has to add it twice.
+- **Poster art & year** — fetched automatically from a free public movie lookup when you add a title. If it can't find a match, it just falls back to the category icon.
+- **Search, sort & filters** — search by title/person/note, sort by newest, oldest, A–Z, or most wanted.
+- **Want to watch** — anyone can tally their interest on an entry.
+- **Ratings** — once something's marked watched, leave a 1–5 star rating; the card shows the group average.
+- **Comments** — a small expandable thread under each entry.
+- **Surprise me** — picks a random unwatched title and scrolls to it, for indecisive movie nights.
 
 ## Customizing it
 Everything lives in `index.html`, so it's all in one place to tweak:
